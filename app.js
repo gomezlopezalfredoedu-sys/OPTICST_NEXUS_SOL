@@ -1672,8 +1672,37 @@ function aplicarTamanoPagina(kind) {
   }
   st.textContent = '@page { size: ' + size + '; margin: ' + margin + '; }';
 }
+/* ---------- v2.3.7: el comprobante cabe en UNA tarjeta 3x5 ----------
+   Aunque el @page es 3in x 5in, en el celular el contenido puede
+   superar el alto de la tarjeta (detalles largos del armazón/lente)
+   y caer a una 2ª página con espacio muerto. Antes de imprimir se
+   estima el alto del comprobante a ancho de tarjeta y, si se pasa,
+   se reduce con zoom (solo en impresión) para que quepa en una sola
+   tarjeta. El zoom nunca sube de 1 ni baja de 0.6 para que el texto
+   siga legible. */
+function zoomAjusteComprobante() {
+  const docEl = document.querySelector('#view-doc .doc-comprobante');
+  if (!docEl || !docEl.scrollHeight) return 1;
+  const anchoPantalla = docEl.clientWidth || 360;
+  const altoPantalla = docEl.scrollHeight;
+  const anchoImprimiblePx = (3 * 96) - (2 * 11.34); // 3in menos 2x3mm
+  const altoImprimiblePx = (5 * 96) - (2 * 11.34);  // 5in menos 2x3mm
+  // Al estrecharse a ancho de tarjeta el texto da más vueltas (más alto);
+  // la fuente impresa es más chica (.78rem), lo que lo compensa en parte.
+  const altoEst = altoPantalla * (anchoPantalla / anchoImprimiblePx) * 0.8;
+  if (altoEst <= altoImprimiblePx) return 1;
+  return Math.max(0.6, altoImprimiblePx / altoEst);
+}
 function imprimirDoc() {
   if (state.currentDoc) aplicarTamanoPagina(state.currentDoc.kind);
+  if (state.currentDoc && state.currentDoc.kind === 'comprobante') {
+    const z = zoomAjusteComprobante();
+    const st = document.getElementById('pageSizeStyle');
+    // La regla va dentro de @media print: solo afecta a la impresión
+    // y no deja el documento chico en pantalla. aplicarTamanoPagina
+    // reescribe el <style> en cada impresión, así que no queda zoom viejo.
+    if (st) st.textContent += ' @media print { #view-doc .doc-comprobante { zoom: ' + z.toFixed(3) + '; } }';
+  }
   window.print();
 }
 
@@ -2151,6 +2180,12 @@ function loadConfig() {
   state.token = localStorage.getItem(LS_TOKEN) || '';
   state.demo = localStorage.getItem(LS_DEMO) === '1';
   $('#modeBadge').hidden = !state.demo;
+  // v2.3.7: el botón de Configuración solo se muestra si la app NO está
+  // configurada (o está en DEMO): una vez instalada y conectada nadie
+  // puede abrirlo y cambiar la URL o el token. Para reconfigurar hay
+  // que desinstalar y reinstalar la app (vuelve la configuración inicial).
+  const btnCfg = $('#btnConfig');
+  if (btnCfg) btnCfg.hidden = !state.demo && !!(state.url && state.token);
   // Fase 5: la selección de trabajos para las hojas de órdenes persiste
   // en este dispositivo mientras Alfredo arma la hoja.
   try { state.ordenesSel = new Set(JSON.parse(localStorage.getItem(LS_ORDENES_SEL) || '[]')); }

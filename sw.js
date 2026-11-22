@@ -1,5 +1,5 @@
 /* OPTICST NEXUS — Service Worker: cachea el app shell para uso instalable/offline básico */
-const CACHE_NAME = 'opticst-nexus-sol-v2';
+const CACHE_NAME = 'opticst-nexus-sol-v3';
 const APP_SHELL = [
   'index.html',
   'styles.css',
