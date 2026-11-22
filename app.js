@@ -1600,8 +1600,7 @@ function docComprobanteHTML(d) {
     '<tr><td>Anticipo / A cuenta</td><td></td><td>' + money(v.aCuenta) + '</td></tr>' +
     '<tr><td>Saldo</td><td></td><td>' + money(v.saldo) + '</td></tr></table></div>' +
     '<p><strong>Cantidad total en palabras:</strong> ' + esc(numeroALetras(v.totalManual)) + ' MXN.</p>' +
-    '<div class="garantias"><strong>Garantías:</strong> ' + esc(GARANTIAS.adaptacion) + ' · ' + esc(GARANTIAS.armazon) + ' · ' + esc(GARANTIAS.tratamiento) + '.<br><strong>Próxima visita:</strong> ' + prox.toLocaleDateString('es-MX') + ' (10 meses).</div>' +
-    '<div class="sig"><div>Firma del cliente</div><div>Boutique de Lentes Yael</div></div></div>';
+    '<div class="garantias"><strong>Garantías:</strong> ' + esc(GARANTIAS.adaptacion) + ' · ' + esc(GARANTIAS.armazon) + ' · ' + esc(GARANTIAS.tratamiento) + '.<br><strong>Próxima visita:</strong> ' + prox.toLocaleDateString('es-MX') + ' (10 meses).</div></div>'; // v2.3.12: sin firmas — Alfredo las quitó del comprobante.
 }
 function docMaterialesHTML(d) {
   const micas = (d && d.micas) || [];
@@ -1662,8 +1661,10 @@ const PAGE_SIZES = {
 };
 function aplicarTamanoPagina(kind) {
   const size = PAGE_SIZES[kind] || 'letter';
-  // v2.3.6: el comprobante va en tarjeta 3x5 con margen chico (3mm).
-  const margin = kind === 'ticket' ? '0' : (kind === 'comprobante' ? '3mm' : ((kind === 'historia') ? '5mm' : '8mm'));
+  // v2.3.6: el comprobante va en tarjeta 3x5 con margen chico.
+  // v2.3.11: margen 1mm — el contenido cabe en una sola tarjeta y
+  // el ancho extra (280px) quita un renglón al detalle del armazón.
+  const margin = kind === 'ticket' ? '0' : (kind === 'comprobante' ? '1mm' : ((kind === 'historia') ? '5mm' : '8mm'));
   let st = document.getElementById('pageSizeStyle');
   if (!st) {
     st = document.createElement('style');
@@ -1672,26 +1673,52 @@ function aplicarTamanoPagina(kind) {
   }
   st.textContent = '@page { size: ' + size + '; margin: ' + margin + '; }';
 }
-/* ---------- v2.3.7: el comprobante cabe en UNA tarjeta 3x5 ----------
-   Aunque el @page es 3in x 5in, en el celular el contenido puede
-   superar el alto de la tarjeta (detalles largos del armazón/lente)
-   y caer a una 2ª página con espacio muerto. Antes de imprimir se
-   estima el alto del comprobante a ancho de tarjeta y, si se pasa,
-   se reduce con zoom (solo en impresión) para que quepa en una sola
-   tarjeta. El zoom nunca sube de 1 ni baja de 0.6 para que el texto
-   siga legible. */
-function zoomAjusteComprobante() {
+/* ---------- v2.3.8: el comprobante LLENA la tarjeta 3x5 ----------
+   v2.3.7 estimaba el alto con una fórmula (ancho pantalla / ancho
+   tarjeta x 0.8) que sobreestimaba: un comprobante que cabe a zoom 1
+   terminaba con zoom 0.6, chico y con la mitad de la tarjeta en blanco.
+   Ahora se MIDE el alto real: al elemento se le ponen por un instante
+   las métricas de impresión (clase medir-print + ancho de tarjeta) y
+   se lee su scrollHeight; la medición es síncrona, sin repintado
+   visible. El zoom solo baja si el contenido de verdad no cabe.
+   Y para que el zoom no achique la caja (eso dejaba el hueco abajo),
+   la regla impresa compensa el tamaño: min-height y ancho se dividen
+   por el zoom, así la caja renderizada sigue ocupando TODA la tarjeta
+   (banner arriba, firmas abajo) y el contenido cabe en una sola.
+   v2.3.9 quitó la compensación y mandaba las firmas a una 2ª hoja —
+   al revés de lo pedido; revertido en v2.3.10: todo el comprobante,
+   firmas incluidas, va en UNA sola tarjeta 3x5. El zoom queda solo
+   como red de seguridad para un comprobante muy largo; las métricas
+   de impresión se apretaron un poco más (.76rem) para que quepa.
+   v2.3.11: la v15 seguía partiendo en 2 hojas (captura 1/2): el alto
+   natural del comprobante supera apenas el área imprimible y el zoom
+   NO mueve el salto de página en la impresión de Android — solo
+   achica el dibujo. Así que el arreglo es que el contenido mismo sea
+   más chico (métricas .72rem) y el área imprimible más grande
+   (margen @page 1mm; el body ya tiene margin:0). El zoom queda como
+   red de seguridad.
+   v2.3.12: Alfredo quitó las firmas del comprobante (no le sirven) y
+   pidió el documento centrado en la tarjeta: sin .sig en el DOM ni en
+   el pintor de canvas, y en print el comprobante lleva
+   justify-content:center con min-height 460px (por debajo del área
+   imprimible 472px). La historia clínica SÍ conserva sus firmas. */
+const ANCHO_TARJETA_PX = (3 * 96) - (2 * 3.78); // 3in menos 2x1mm = 280.44
+const ALTO_TARJETA_PX = (5 * 96) - (2 * 3.78);  // 5in menos 2x1mm = 472.44
+function medirAltoImpresoComprobante() {
   const docEl = document.querySelector('#view-doc .doc-comprobante');
-  if (!docEl || !docEl.scrollHeight) return 1;
-  const anchoPantalla = docEl.clientWidth || 360;
-  const altoPantalla = docEl.scrollHeight;
-  const anchoImprimiblePx = (3 * 96) - (2 * 11.34); // 3in menos 2x3mm
-  const altoImprimiblePx = (5 * 96) - (2 * 11.34);  // 5in menos 2x3mm
-  // Al estrecharse a ancho de tarjeta el texto da más vueltas (más alto);
-  // la fuente impresa es más chica (.78rem), lo que lo compensa en parte.
-  const altoEst = altoPantalla * (anchoPantalla / anchoImprimiblePx) * 0.8;
-  if (altoEst <= altoImprimiblePx) return 1;
-  return Math.max(0.6, altoImprimiblePx / altoEst);
+  if (!docEl) return 0;
+  const prevWidth = docEl.style.width;
+  docEl.classList.add('medir-print');
+  docEl.style.width = ANCHO_TARJETA_PX + 'px';
+  const h = docEl.scrollHeight || 0;
+  docEl.classList.remove('medir-print');
+  docEl.style.width = prevWidth;
+  return h;
+}
+function zoomAjusteComprobante() {
+  const altoNatural = medirAltoImpresoComprobante();
+  if (!altoNatural || altoNatural <= ALTO_TARJETA_PX) return 1;
+  return Math.max(0.6, ALTO_TARJETA_PX / altoNatural);
 }
 function imprimirDoc() {
   if (state.currentDoc) aplicarTamanoPagina(state.currentDoc.kind);
@@ -1701,6 +1728,8 @@ function imprimirDoc() {
     // La regla va dentro de @media print: solo afecta a la impresión
     // y no deja el documento chico en pantalla. aplicarTamanoPagina
     // reescribe el <style> en cada impresión, así que no queda zoom viejo.
+    // v2.3.10: solo zoom, sin min-height ni width — todo el
+    // comprobante, firmas incluidas, va en una sola tarjeta.
     if (st) st.textContent += ' @media print { #view-doc .doc-comprobante { zoom: ' + z.toFixed(3) + '; } }';
   }
   window.print();
@@ -1947,18 +1976,7 @@ function dibujarComprobante(ctx, doc, logo, escala, dibujar, marca, altoTotal) {
     parrafoMixto(ctx, [{ t: 'Próxima visita: ', b: true }, { t: prox.toLocaleDateString('es-MX') + ' (10 meses).' }], M + 10, y + 10 + g1 + 4 + 13, cw - 20, F, 13, 16, true, INK);
   }
   y += cajaH + 10;
-  // Firmas.
-  const lineaY = y + 14;
-  if (dibujar) {
-    ctx.strokeStyle = INK; ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(M, lineaY); ctx.lineTo(M + cw * 0.45, lineaY);
-    ctx.moveTo(W - M - cw * 0.45, lineaY); ctx.lineTo(W - M, lineaY);
-    ctx.stroke();
-    texto(ctx, 'Firma del cliente', M + cw * 0.225, lineaY + 16, '13px ' + F, INK, 'center', true);
-    texto(ctx, 'Boutique de Lentes Yael', W - M - cw * 0.225, lineaY + 16, '13px ' + F, INK, 'center', true);
-  }
-  y = lineaY + 16 + 6;
+  // v2.3.12: sin firmas — Alfredo las quitó del comprobante.
   return { ancho: Math.round(W * k), alto: Math.round((y + M) * k) };
 }
 /* Pinta el TICKET 58 mm en un ctx 2D (refleja .doc-ticket del DOM:
@@ -2287,9 +2305,17 @@ function init() {
   $('#lcTipo').addEventListener('change', actualizarMarcasLC);
   $('#lcMarca').addEventListener('change', actualizarMarcasLC);
   $('#lenteTratamiento').addEventListener('change', ev => { $('#filtroTonoWrap').hidden = ev.target.value !== 'Filtro color'; });
+  // v2.3.14: el concepto de la lista de micas trae el Precio_Estimado,
+  // que es el COSTO estimado de la mica (lo que Alfredo paga al
+  // proveedor), NO el precio de venta del lente. Antes se copiaba a
+  // #lentePrecio (precio de venta) y corrompía el total definido y el
+  // descuento, así que Alfredo tenía que borrarlo y volver a teclear
+  // el precio de venta. Ahora el estimado llena el Costo final de
+  // inversión (#pCostoInversion, paso 5), donde va el costo y se
+  // corrige al costo real; el precio de venta del lente se teclea.
   $('#lenteConcepto').addEventListener('change', ev => {
     const m = ev.target.value.match(/\$([\d.,]+)/);
-    if (m) $('#lentePrecio').value = m[1].replace(/,/g, '');
+    if (m) $('#pCostoInversion').value = m[1].replace(/,/g, '');
   });
   ['#pTotalManual', '#pACuenta'].forEach(s => $(s).addEventListener('input', actualizarPrecios));
   $('#pLiquidar').addEventListener('change', ev => {

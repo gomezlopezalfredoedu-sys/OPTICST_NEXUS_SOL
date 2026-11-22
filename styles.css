@@ -334,8 +334,23 @@ code{background:var(--purple-light);padding:.1rem .3rem;border-radius:5px}
    (@page) lo inyecta app.js según el documento actual (ver
    aplicarTamanoPagina); aquí solo se fija el comportamiento de color. */
 html,body,.doc,.doc-comprobante .banner-top,.doc-watermark,.orden-label-wm,.doc-comprobante .garantias,.doc th,.doc .total-row td{print-color-adjust:exact;-webkit-print-color-adjust:exact}
+/* v2.3.8: métricas de impresión en pantalla, solo para medir el alto
+   real del comprobante a ancho de tarjeta antes de imprimir. Replica
+   las reglas compactas de @media print; no cambia nada visible. */
+.doc-comprobante.medir-print{font-size:.72rem;padding:.3rem}
+.doc-comprobante.medir-print .banner-top{padding:.25rem .5rem}
+.doc-comprobante.medir-print .banner-logo{width:72px}
+.doc-comprobante.medir-print .banner-top .doc-title{font-size:.90rem}
+.doc-comprobante.medir-print table td,.doc-comprobante.medir-print table th{padding:.08rem .2rem;font-size:.66rem;line-height:1.3}
+.doc-comprobante.medir-print .garantias{font-size:.70rem;padding:.3rem .45rem}
+.doc-comprobante.medir-print p{margin:.25rem 0}
 @media print{
-  body{background:#fff}
+  /* v2.3.13: el padding-bottom del body (para la barra de navegación
+     inferior, ~92px) NO se reseteaba en print y se comía ese espacio
+     de la tarjeta, por eso el comprobante se partía en 2 hojas aunque
+     el contenido cupiera. Con padding-bottom:0 el PDF sale en 1 hoja
+     (verificado en Chromium real: 1 página, contenido completo). */
+  body{background:#fff;padding-bottom:0}
   .app-footer,.doc-toolbar,.wizard-nav,.btn,.bottom-nav{display:none!important}
   main{max-width:none;padding:0}
   .view{display:none!important}
@@ -353,22 +368,26 @@ html,body,.doc,.doc-comprobante .banner-top,.doc-watermark,.orden-label-wm,.doc-
      padding y márgenes, y las firmas/garantías nunca se parten. */
   .doc-comprobante{padding:.6rem}
   .doc-comprobante .banner-top{padding:.4rem .7rem}
-  .doc-comprobante p{margin:.3rem 0}
+  .doc-comprobante p{margin:.25rem 0}
   .doc-comprobante table td,.doc-comprobante table th{padding:.2rem .35rem}
   .doc-comprobante .garantias{padding:.4rem .6rem;break-inside:avoid;page-break-inside:avoid}
-  .doc-comprobante .sig{margin-top:1rem;break-inside:avoid;page-break-inside:avoid}
   /* La marca de agua y el degradado del banner también se imprimen. */
   .doc-comprobante .banner-top,.doc-watermark,.orden-label-wm,.doc-comprobante .garantias,.doc th,.doc .total-row td{print-color-adjust:exact;-webkit-print-color-adjust:exact}
-  /* v2.3.6: el comprobante se imprime en Index Card 3x5 (3in x 5in),
-     centrado y sin espacio muerto: el documento ocupa todo el alto
-     de la tarjeta y las secciones se reparten (banner arriba, firmas
-     abajo). En la tarjeta el contenido va más compacto para que quepa
-     en una sola tarjeta. */
-  .doc-comprobante{box-sizing:border-box;max-width:none;width:100%;min-height:calc(5in - 6mm);padding:.4rem;display:flex;flex-direction:column;justify-content:space-between;font-size:.78rem}
-  .doc-comprobante .banner-top{padding:.3rem .6rem}
-  .doc-comprobante .banner-logo{width:80px}
-  .doc-comprobante .banner-top .doc-title{font-size:.95rem}
-  .doc-comprobante table td,.doc-comprobante table th{padding:.1rem .25rem;font-size:.72rem;line-height:1.3}
-  .doc-comprobante .garantias{font-size:.75rem;padding:.35rem .55rem}
-  .doc-comprobante .sig{margin-top:.6rem}
+  /* v2.3.6: el comprobante se imprime en Index Card 3x5 (3in x 5in).
+     Contenido compacto en la tarjeta. v2.3.10: TODO en una sola
+     tarjeta, firmas incluidas. v2.3.11: la v15 seguía partiendo en 2
+     hojas porque el alto natural supera apenas el área imprimible y
+     el zoom NO mueve el salto de página en Android — así que el
+     contenido mismo se hizo más chico (.72rem) y el margen @page es
+     1mm (área 280x472px). v2.3.12: SIN firmas (Alfredo las quitó) y
+     documento centrado verticalmente en la tarjeta
+     (justify-content:center, min-height 460px, por debajo de los
+     472px del área imprimible). El llenado forzado de v2.3.6
+     (min-height + space-between) ya no existe; ahora solo el centrado. */
+  .doc-comprobante{box-sizing:border-box;max-width:none;width:100%;padding:.3rem;display:flex;flex-direction:column;justify-content:center;min-height:460px;font-size:.72rem}
+  .doc-comprobante .banner-top{padding:.25rem .5rem}
+  .doc-comprobante .banner-logo{width:72px}
+  .doc-comprobante .banner-top .doc-title{font-size:.90rem}
+  .doc-comprobante table td,.doc-comprobante table th{padding:.08rem .2rem;font-size:.66rem;line-height:1.3}
+  .doc-comprobante .garantias{font-size:.70rem;padding:.3rem .45rem}
 }
