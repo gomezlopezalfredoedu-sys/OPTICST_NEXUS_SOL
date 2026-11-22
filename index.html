@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0A0F1F">
+<meta name="description" content="OPTICST NEXUS — Plataforma tecnológica para el sector óptico · Boutique de Lentes Yael, Sucursal Calle 4">
+<title>OPTICST NEXUS · El Sol — Boutique de Lentes Yael</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<!-- Splash de arranque (v2.1 punto 8): solo al abrir la app ya configurada.
+     Se muestra brevemente y se puede saltar con un toque. -->
+<div id="splashStart" hidden>
+  <img src="marca-nexus.png" alt="OPTICST NEXUS">
+  <div class="splash-lockup">
+    <div class="splash-name">OPTIC<span class="splash-grad">ST</span></div>
+    <div class="splash-name2">NEXUS</div>
+  </div>
+  <div class="splash-by">By Caremi Sistems Technology</div>
+</div>
+
+<main id="app">
+  <!-- Pantalla de configuración inicial -->
+  <section id="view-setup" class="view" hidden>
+    <div class="splash">
+      <img src="marca-nexus.png" alt="OPTICST NEXUS" class="splash-logo">
+      <div class="splash-name">OPTICST NEXUS</div>
+      <div class="splash-tag">Tecnología que impulsa tu óptica</div>
+    </div>
+    <div class="card setup-card">
+      <button id="btnSetupBack" class="btn btn-ghost" type="button" hidden>← Volver al panel</button>
+      <h2>Configuración inicial</h2>
+      <p>Para usar la app, conecta tu backend de Google Apps Script. La URL y el token se guardan solo en este dispositivo (localStorage); nunca se envían a ningún otro lugar.</p>
+      <form id="formSetup">
+        <label>URL del web app de Apps Script
+          <input type="url" id="setupUrl" placeholder="https://script.google.com/macros/s/.../exec" required>
+        </label>
+        <label>Token de acceso (API_TOKEN)
+          <input type="password" id="setupToken" placeholder="Token generado por setupLibro()" autocomplete="off" required>
+        </label>
+        <button class="btn btn-primary" type="submit">Guardar y conectar</button>
+        <p id="setupError" class="error" hidden></p>
+      </form>
+      <hr>
+      <label class="demo-toggle">
+        <input type="checkbox" id="setupDemo">
+        <span><strong>Modo demostración (DEMO)</strong> — Recorre el diseño sin backend. Los datos son de ejemplo, viven solo en memoria y <strong>nada se guarda</strong>.</span>
+      </label>
+      <button id="btnEnterDemo" class="btn btn-secondary" type="button">Entrar en modo demostración</button>
+      <p class="hint">El token lo genera la función <code>setupLibro()</code> del backend y queda en Script Properties. Si cambias de dispositivo, vuelve a capturarlo aquí.</p>
+    </div>
+  </section>
+
+  <!-- Dashboard -->
+  <section id="view-home" class="view" hidden>
+    <h2>Panel principal</h2>
+    <p class="subtitle">¿Qué quieres hacer hoy?</p>
+    <div class="dashboard-grid dashboard-hero" id="dashboardGrid">
+      <button class="dash-card dash-hero-big" data-nav="nueva-venta" type="button"><span class="dash-icon">＋</span><strong>Nueva venta</strong><small>Cliente, historia clínica y venta</small></button>
+      <button class="dash-card dash-hero-buscar" data-nav="buscar-cliente" type="button"><span class="dash-icon">🔍</span><strong>Buscar cliente</strong><small>Por nombre, con sus documentos</small></button>
+      <button class="dash-card dash-hero-abono" data-nav="abono" type="button"><span class="dash-icon">💳</span><strong>Registrar abono</strong><small>Por folio de venta o por cliente</small></button>
+    </div>
+    <div class="dash-secondary">
+      <span class="dash-secondary-title">Más secciones</span>
+      <div class="dash-links">
+        <button class="dash-link" data-nav="libro-visitas" type="button">📖 Libro de visitas</button>
+        <button class="dash-link" data-nav="pendientes" type="button">📦 Pendientes</button>
+        <button class="dash-link" data-nav="ventas" type="button">🛒 Ventas</button>
+        <button class="dash-link" data-nav="en-proceso" type="button">⚙️ En proceso</button>
+        <button class="dash-link" data-nav="ordenes" type="button">🏷️ Órdenes de trabajo</button>
+        <button class="dash-link" data-nav="resumen" type="button">📊 Resumen</button>
+        <button class="dash-link" data-nav="lista-materiales" type="button">🧾 Lista de materiales</button>
+        <button class="dash-link" data-nav="catalogos" type="button">📚 Catálogos</button>
+      </div>
+      <p class="hint">Los 5 documentos se generan desde la ficha de cada venta o desde el Libro de visitas: historia clínica, orden de trabajo, ticket, comprobante de venta y lista de materiales.</p>
+    </div>
+    <!-- v2.1 punto 8: sin encabezado superior, Configuración y el aviso
+         DEMO viven aquí, en el panel principal. -->
+    <div class="home-utils">
+      <span id="modeBadge" class="badge badge-demo" hidden>DEMO</span>
+      <button id="btnConfig" class="btn btn-ghost" type="button">⚙️ Configuración</button>
+    </div>
+    <p id="homeError" class="error" hidden></p>
+  </section>
+
+  <!-- Nueva venta: asistente por pasos -->
+  <section id="view-nueva-venta" class="view" hidden>
+    <h2>Nueva venta</h2>
+    <ol class="steps" id="wizardSteps">
+      <li data-step="1" class="active">Cliente</li>
+      <li data-step="2">Historia clínica</li>
+      <li data-step="3">¿Qué se vende?</li>
+      <li data-step="4">Lente</li>
+      <li data-step="5">Precios y pago</li>
+      <li data-step="6">Revisar y guardar</li>
+    </ol>
+    <div id="wizardError" class="error" hidden></div>
+
+    <div class="wizard-step" data-step-panel="1">
+      <div class="card">
+        <h3>¿Quién es el cliente?</h3>
+        <label>Buscar cliente existente por nombre
+          <span class="row"><input type="search" id="nvBuscar" placeholder="Escribe el nombre…"><button class="btn btn-secondary" id="btnNvBuscar" type="button">Buscar</button></span>
+        </label>
+        <div id="nvResultados" class="list"></div>
+        <p id="nvClienteSel" class="success" hidden></p>
+        <hr>
+        <h4>o crear cliente nuevo</h4>
+        <div class="grid2">
+          <label>Nombre completo *<input id="nvNombre" type="text" autocomplete="name"></label>
+          <label>Fecha de nacimiento *<input id="nvFechaNac" type="date"></label>
+          <label>Edad<input id="nvEdad" type="text" readonly placeholder="Se calcula sola"></label>
+          <label>Teléfono<input id="nvTelefono" type="tel" autocomplete="tel"></label>
+          <label>Ocupación<input id="nvOcupacion" type="text"></label>
+          <label>Sexo
+            <select id="nvSexo"><option value="">—</option><option>Femenino</option><option>Masculino</option></select>
+          </label>
+        </div>
+        <button class="btn btn-secondary" id="btnNvCrearCliente" type="button">Crear cliente</button>
+      </div>
+    </div>
+
+    <div class="wizard-step" data-step-panel="2" hidden>
+      <div class="card">
+        <h3>Historia clínica</h3>
+        <p class="hint">La graduación se escribe <strong>una sola vez</strong> aquí y se reutiliza en la orden de trabajo y en la lista de materiales.</p>
+        <label>¿Usa lentes?
+          <select id="hcUsaLentes"><option value="">—</option><option value="sí">Sí</option><option value="no">No</option></select>
+        </label>
+        <fieldset id="hcLensometria" hidden>
+          <legend>Lensometría (lentes que porta)</legend>
+          <div class="grid2">
+            <div><h4>O.D.</h4><div class="rx-row"><select class="lens-esf-od"></select><select class="lens-cil-od"></select><select class="lens-eje-od"></select></div></div>
+            <div><h4>O.I.</h4><div class="rx-row"><select class="lens-esf-oi"></select><select class="lens-cil-oi"></select><select class="lens-eje-oi"></select></div></div>
+          </div>
+          <div class="grid2">
+            <label>Tratamientos<input id="lensTrat" type="text" placeholder="Ej. AR, Blue…"></label>
+            <label>Diseño del lente<select id="lensDiseno"></select></label>
+            <label>Add<select id="lensAdd"></select></label>
+            <label>DNP<input id="lensDnp" type="number" step="0.5" min="0" placeholder="mm"></label>
+          </div>
+        </fieldset>
+        <div id="hcMotivoWrap" hidden>
+          <label>Motivo de consulta<select id="hcMotivo"></select></label>
+        </div>
+        <fieldset>
+          <legend>Antecedentes</legend>
+          <div class="grid2">
+            <label>Tipo de lente<select id="antTipo"><option value="">—</option><option>Monofocal</option><option>Bifocal</option><option>Progresivo</option><option>Ninguno</option></select></label>
+            <label class="check"><input type="checkbox" id="antDiabetes"> Diabetes</label>
+            <label class="check"><input type="checkbox" id="antHipertension"> Hipertensión</label>
+            <label class="check"><input type="checkbox" id="antMigrana"> Migraña</label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Agudeza visual (Snellen)</legend>
+          <div class="av-grid" id="avGrid"></div>
+        </fieldset>
+        <fieldset>
+          <legend>Graduación del examen (refracción subjetiva)</legend>
+          <div class="grid2">
+            <div><h4>O.D.</h4><div class="rx-row"><select id="gradEsfOd"></select><select id="gradCilOd"></select><select id="gradEjeOd"></select></div></div>
+            <div><h4>O.I.</h4><div class="rx-row"><select id="gradEsfOi"></select><select id="gradCilOi"></select><select id="gradEjeOi"></select></div></div>
+          </div>
+          <div class="grid2">
+            <label>Add<select id="gradAdd"></select></label>
+            <label>DNP<input id="gradDnp" type="number" step="0.5" min="0" placeholder="mm"></label>
+          </div>
+        </fieldset>
+        <div class="grid2">
+          <label>Diagnóstico refractivo<input id="hcDiagnostico" type="text" placeholder="Ej. Miopía, astigmatismo…"></label>
+          <label>Indicaciones<input id="hcIndicaciones" type="text"></label>
+        </div>
+        <label>Recomendación<input id="hcRecomendacion" type="text" placeholder="Ej. Progresivo, Blue, Poli…"></label>
+      </div>
+    </div>
+
+    <div class="wizard-step" data-step-panel="3" hidden>
+      <div class="card">
+        <h3>¿Qué se vende?</h3>
+        <div class="radio-cards" id="tipoVentaWrap">
+          <label class="radio-card"><input type="radio" name="tipoVenta" value="lentes_completos" checked> <strong>Lentes completos</strong><small>Armazón + lente · incluye estuche y microfibra de obsequio</small></label>
+          <label class="radio-card"><input type="radio" name="tipoVenta" value="rebisel"> <strong>Rebisel</strong><small>Adaptar las micas del cliente a un armazón nuevo</small></label>
+          <label class="radio-card"><input type="radio" name="tipoVenta" value="accesorio"> <strong>Accesorio</strong><small>Kit de limpieza, cadena, estuche duro…</small></label>
+          <label class="radio-card"><input type="radio" name="tipoVenta" value="lente_contacto"> <strong>Lente de contacto</strong><small>Caja de 6 lentes · reemplazo mensual</small></label>
+        </div>
+        <fieldset id="fsArmazon">
+          <legend>Armazón</legend>
+          <div class="grid2">
+            <label>Material<select id="armMaterial"></select></label>
+            <label>Diseño<select id="armDiseno"></select></label>
+            <label>Modelo<input id="armModelo" type="text"></label>
+            <label>Marca<input id="armMarca" type="text"></label>
+            <label>Color (se escribe a mano)<input id="armColor" type="text" placeholder="Ej. Negro mate"></label>
+            <label>Precio definido $<input id="armPrecio" type="number" step="0.01" min="0"></label>
+          </div>
+          <label id="lcConArmazonWrap" class="check" hidden><input type="checkbox" id="lcConArmazon"> Esta venta de LC va con armazón (promoción)</label>
+        </fieldset>
+        <fieldset id="fsRebisel" hidden>
+          <legend>Rebisel</legend>
+          <label>Concepto<select id="rebiselConcepto"><option>Rebisel completo</option><option>Rebisel ranurado</option></select></label>
+          <label>Precio de venta $<input id="rebiselPrecio" type="number" step="0.01" min="0"></label>
+        </fieldset>
+        <fieldset id="fsAccesorio" hidden>
+          <legend>Accesorio</legend>
+          <label>Descripción<select id="accDesc"><option>Kit de limpieza</option><option>Cadena</option><option>Estuche duro</option></select></label>
+          <label>Precio de venta $<input id="accPrecio" type="number" step="0.01" min="0"></label>
+        </fieldset>
+        <label class="lc-switch" id="lcSwitchWrap" hidden>
+          <span><strong>Lente de contacto</strong><small>Actívalo solo si esta venta incluye lentes de contacto (caja de 6 · reemplazo mensual)</small></span>
+          <span class="switch"><input type="checkbox" id="lcSwitch"><span class="slider"></span></span>
+        </label>
+        <fieldset id="fsLC" hidden>
+          <legend>Lente de contacto</legend>
+          <div class="grid2">
+            <label>Tipo<select id="lcTipo"><option>Esférico</option><option>Tórico</option><option>Cosmético</option></select></label>
+            <label>Marca<select id="lcMarca"></select></label>
+            <label>Curva base<input id="lcCurvaBase" type="text" placeholder="Ej. 8.6"></label>
+            <label>Diámetro<input id="lcDiametro" type="text" placeholder="Ej. 14.2"></label>
+            <label>Precio definido (caja de 6) $<input id="lcPrecio" type="number" step="0.01" min="0"></label>
+            <label>Presentación<input type="text" value="Caja de 6 lentes · reemplazo mensual" readonly></label>
+          </div>
+          <p class="hint">La graduación del LC es la misma del examen (paso 2); no se vuelve a escribir. Tórico usa cilindro y eje.</p>
+        </fieldset>
+      </div>
+    </div>
+
+    <div class="wizard-step" data-step-panel="4" hidden>
+      <div class="card">
+        <h3>El lente</h3>
+        <div id="fsLente">
+          <div class="grid2">
+            <label>Material del lente<select id="lenteMaterial"></select></label>
+            <label>Diseño del lente<select id="lenteDiseno"></select></label>
+            <label>Tratamiento<select id="lenteTratamiento"></select></label>
+            <label id="filtroTonoWrap" hidden>Filtro de color · tono<select id="filtroTono"><option>1</option><option>2</option><option>3</option></select></label>
+            <label>Proveedor<select id="lenteProveedor"></select></label>
+            <label>Precio definido del lente $<input id="lentePrecio" type="number" step="0.01" min="0"></label>
+          </div>
+          <label>Concepto de precio (lista de micas)<select id="lenteConcepto"></select></label>
+          <p class="hint">DNP: <span id="lenteDnpEcho">—</span> (de la historia clínica). El precio del lente depende de graduación, material, diseño y tratamiento; los precios de lista son estimados.</p>
+        </div>
+        <p id="lenteSkipMsg" class="hint" hidden>Esta venta no lleva lente de armazón (accesorio o LC sin armazón). Continúa al paso de precios.</p>
+      </div>
+    </div>
+
+    <div class="wizard-step" data-step-panel="5" hidden>
+      <div class="card">
+        <h3>Precios y pago</h3>
+        <div class="grid2">
+          <label>Precio definido armazón $<input id="pArmazon" type="number" step="0.01" min="0" readonly></label>
+          <label>Precio definido lente / LC $<input id="pLente" type="number" step="0.01" min="0" readonly></label>
+          <label>Precio definido total $<input id="pTotalDef" type="number" step="0.01" readonly></label>
+          <label>Total manual $ *<input id="pTotalManual" type="number" step="0.01" min="0" required></label>
+          <label>Descuento (pesos, calculado)<input id="pDescuento" type="number" step="0.01" readonly></label>
+          <label>Costo final de inversión (costo real de la mica) $<input id="pCostoInversion" type="number" step="0.01" min="0"></label>
+          <label>Costo de producción (servicio de laboratorio)<select id="pCostoProd"></select></label>
+          <label>A cuenta $<input id="pACuenta" type="number" step="0.01" min="0"></label>
+          <label>Método de pago<select id="pMetodo"></select></label>
+          <label>Concepto del pago<select id="pConcepto"><option value="anticipo">Anticipo</option><option value="a cuenta">A cuenta</option><option value="liquidación">Liquidación</option></select></label>
+        </div>
+        <label class="check"><input type="checkbox" id="pLiquidar"> Liquidar en la venta (paga el total ahora)</label>
+        <p>Saldo: <strong id="pSaldo">$0.00</strong></p>
+      </div>
+    </div>
+
+    <div class="wizard-step" data-step-panel="6" hidden>
+      <div class="card">
+        <h3>Revisa y guarda</h3>
+        <div id="confirmResumen"></div>
+        <div class="row">
+          <button class="btn btn-primary" id="btnGuardarVenta" type="button">Guardar venta</button>
+        </div>
+        <p id="ventaGuardada" class="success" hidden></p>
+        <div id="docsAfterSave" class="row" hidden>
+          <button class="btn btn-secondary" data-doc="historia" type="button">Historia clínica</button>
+          <button class="btn btn-secondary" data-doc="orden" type="button">Orden de trabajo</button>
+          <button class="btn btn-secondary" data-doc="ticket" type="button">Ticket</button>
+          <button class="btn btn-secondary" data-doc="comprobante" type="button">Comprobante de venta</button>
+          <button class="btn btn-secondary" data-doc="materiales" type="button">Lista de materiales</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="row wizard-nav">
+      <button class="btn btn-ghost" id="btnWizardBack" type="button">← Atrás</button>
+      <button class="btn btn-primary" id="btnWizardNext" type="button">Siguiente →</button>
+    </div>
+  </section>
+
+  <!-- Buscar cliente -->
+  <section id="view-buscar-cliente" class="view" hidden>
+    <h2>Buscar cliente</h2>
+    <div class="card">
+      <label>Nombre del cliente
+        <span class="row"><input type="search" id="bcBuscar" placeholder="Escribe el nombre…"><button class="btn btn-primary" id="btnBcBuscar" type="button">Buscar</button></span>
+      </label>
+      <div id="bcResultados" class="list"></div>
+    </div>
+    <div id="bcFicha"></div>
+  </section>
+
+  <!-- Libro de visitas -->
+  <section id="view-libro-visitas" class="view" hidden>
+    <h2>Libro de visitas</h2>
+    <div class="card">
+      <p>Expediente de cada paciente: visitas, actualizaciones de graduación y ventas.</p>
+      <label>Buscar paciente por nombre
+        <span class="row"><input type="search" id="lvBuscar" placeholder="Escribe el nombre…"><button class="btn btn-primary" id="btnLvBuscar" type="button">Buscar</button></span>
+      </label>
+      <div id="lvResultados" class="list"></div>
+    </div>
+    <div id="lvExpediente"></div>
+  </section>
+
+  <!-- Pendientes -->
+  <section id="view-pendientes" class="view" hidden>
+    <h2>Pendientes</h2>
+    <p class="subtitle">Trabajos pendientes de entrega. Marca los entregados con el check y guárdalos.</p>
+    <div id="pendList" class="list"></div>
+    <div class="row"><button class="btn btn-primary" id="btnMarcarEntregados" type="button">Marcar seleccionados como entregados</button></div>
+    <p id="pendMsg" class="success" hidden></p>
+  </section>
+
+  <!-- En proceso -->
+  <section id="view-en-proceso" class="view" hidden>
+    <h2>En proceso</h2>
+    <p class="subtitle">Trabajos en elaboración o pendientes de elaboración.</p>
+    <div class="row"><button class="btn btn-primary" id="btnProcArmarHoja" type="button">Armar hoja de órdenes</button></div>
+    <div id="procList" class="list"></div>
+  </section>
+
+  <!-- Órdenes de trabajo (Fase 5): acumular etiquetas por proveedor -->
+  <section id="view-ordenes" class="view" hidden>
+    <h2>Órdenes de trabajo</h2>
+    <p class="subtitle">Selecciona trabajos de En proceso y Pendientes para armar hojas de etiquetas por proveedor (hasta 9 por hoja, formato carta). La selección se guarda en este dispositivo mientras armas la hoja.</p>
+    <div class="card">
+      <div class="row">
+        <button class="btn btn-primary" id="btnOrdenesCargar" type="button">Cargar trabajos</button>
+        <button class="btn btn-secondary" id="btnOrdenesLimpiar" type="button">Limpiar selección (<span id="ordenesSelCount">0</span>)</button>
+      </div>
+      <p id="ordenesMsg" class="hint">Selecciona trabajos con el check; cada trabajo aparece una sola vez en la hoja.</p>
+      <div id="ordenesList" class="list"></div>
+    </div>
+    <div class="card">
+      <h3>Hojas por proveedor</h3>
+      <p class="hint">Cada proveedor tiene su propia hoja (hasta 9 etiquetas). Los trabajos sin proveedor van en el grupo "Sin proveedor". Se puede imprimir la hoja aunque no sean 9 etiquetas.</p>
+      <div id="ordenesGrupos"></div>
+    </div>
+  </section>
+
+  <!-- Ventas (Fase 2) -->
+  <section id="view-ventas" class="view" hidden>
+    <h2>Ventas</h2>
+    <p class="subtitle">Últimas 50 ventas, de la más reciente a la más antigua. Busca por folio o por nombre del cliente.</p>
+    <div class="card">
+      <label>Buscar por folio o por cliente
+        <span class="row"><input type="search" id="ventasBuscar" placeholder="Ej. VTA-0001 o María…" autocomplete="off"><button class="btn btn-primary" id="btnVentasBuscar" type="button">Buscar</button></span>
+      </label>
+      <p id="ventasCount" class="hint"></p>
+      <div id="ventasList" class="list"></div>
+    </div>
+    <p id="ventasError" class="error" hidden></p>
+  </section>
+
+  <!-- Resumen -->
+  <section id="view-resumen" class="view" hidden>
+    <h2>Resumen</h2>
+    <div class="card">
+      <label>Periodo
+        <select id="resPeriodo"><option value="semana">Semana</option><option value="mes" selected>Mes</option><option value="anio">Año</option></select>
+      </label>
+      <button class="btn btn-primary" id="btnResCargar" type="button">Actualizar</button>
+      <div id="resumenData"></div>
+      <h3>Gastos del periodo</h3>
+      <div id="gastosData"></div>
+    </div>
+    <div class="card">
+      <h3>Registrar gasto</h3>
+      <div class="grid2">
+        <label>Fecha<input id="gastoFecha" type="date"></label>
+        <label>Concepto<input id="gastoConcepto" type="text"></label>
+        <label>Monto $<input id="gastoMonto" type="number" step="0.01" min="0"></label>
+        <label>Método<select id="gastoMetodo"></select></label>
+        <label>Comprobante<input id="gastoComprobante" type="text" placeholder="Folio o referencia (opcional)"></label>
+      </div>
+      <button class="btn btn-secondary" id="btnGasto" type="button">Guardar gasto</button>
+      <p id="gastoMsg" class="success" hidden></p>
+    </div>
+    <div class="card">
+      <h3>Fondo de producción</h3>
+      <div id="fondoData"></div>
+      <div class="grid2">
+        <label>Salida del fondo · concepto<input id="fondoConcepto" type="text" placeholder="Ej. Esmeril de banco"></label>
+        <label>Monto $<input id="fondoMonto" type="number" step="0.01" min="0"></label>
+      </div>
+      <button class="btn btn-secondary" id="btnFondoSalida" type="button">Registrar salida del fondo</button>
+      <p id="fondoMsg" class="error" hidden></p>
+    </div>
+    <div class="card">
+      <h3>Corte de caja del día</h3>
+      <label>Fecha<input id="corteFecha" type="date"></label>
+      <button class="btn btn-secondary" id="btnCorteCargar" type="button">Calcular corte</button>
+      <div id="corteData"></div>
+      <div class="grid2">
+        <label>Monto contado en caja $<input id="corteContado" type="number" step="0.01" min="0"></label>
+      </div>
+      <p>Diferencia: <strong id="corteDiferencia">$0.00</strong></p>
+      <button class="btn btn-primary" id="btnCorteGuardar" type="button">Guardar corte de caja</button>
+      <p id="corteMsg" class="success" hidden></p>
+    </div>
+  </section>
+
+  <!-- Lista de materiales -->
+  <section id="view-lista-materiales" class="view" hidden>
+    <h2>Lista de materiales</h2>
+    <div class="card">
+      <p>Primero las micas pendientes de realizar; en otra hoja, los armazones pendientes.</p>
+      <button class="btn btn-primary" id="btnMatCargar" type="button">Cargar lista</button>
+      <div id="matData"></div>
+      <div class="row"><button class="btn btn-secondary" data-doc="materiales" type="button">Ver / imprimir lista</button></div>
+    </div>
+  </section>
+
+  <!-- Catálogos -->
+  <section id="view-catalogos" class="view" hidden>
+    <h2>Catálogos</h2>
+    <div class="card">
+      <p><strong>Solo lectura en la app.</strong> Los catálogos, precios y costos se editan en el Google Sheet (pestañas Catalogo_Armazones, Precios_Lentes, Costos_Produccion, Catalogo_Conceptos, Precios_LC y Listas). Si agregas un renglón en el Sheet, aparece aquí sin tocar código.</p>
+      <button class="btn btn-primary" id="btnCatCargar" type="button">Cargar catálogos</button>
+      <div id="catData"></div>
+    </div>
+  </section>
+
+  <!-- Registrar abono (flujo rápido) -->
+  <section id="view-abono" class="view" hidden>
+    <h2>Registrar abono</h2>
+    <p class="subtitle">Busca la venta por su folio o por el nombre del cliente y registra el pago.</p>
+    <div class="card">
+      <label>Buscar por folio de venta
+        <span class="row"><input type="search" id="abFolio" placeholder="Ej. VTA-0001" autocomplete="off"><button class="btn btn-primary" id="btnAbFolio" type="button">Buscar folio</button></span>
+      </label>
+      <hr>
+      <label>o buscar por nombre del cliente
+        <span class="row"><input type="search" id="abBuscar" placeholder="Escribe el nombre…" autocomplete="off"><button class="btn btn-primary" id="btnAbBuscar" type="button">Buscar cliente</button></span>
+      </label>
+      <div id="abResultados" class="list"></div>
+    </div>
+    <div id="abVentaBox" hidden>
+      <div class="card" id="abVentaCard"></div>
+      <div class="card">
+        <h3>Registrar el pago</h3>
+        <div class="grid2">
+          <label>Monto $ *<input id="abMonto" type="number" step="0.01" min="0" inputmode="decimal"></label>
+          <label>Método<select id="abMetodo"></select></label>
+          <label>Concepto<select id="abConcepto"><option value="abono">Abono</option><option value="liquidación">Liquidación</option></select></label>
+        </div>
+        <div class="row">
+          <button class="btn btn-primary" id="btnAbGuardar" type="button">Guardar abono</button>
+          <button class="btn btn-secondary" id="btnAbLiquidar" type="button">Liquidar saldo completo</button>
+        </div>
+        <p id="abMsg" class="success" hidden></p>
+      </div>
+    </div>
+    <p id="abError" class="error" hidden></p>
+  </section>
+
+  <!-- Ficha de venta (abonos y correcciones) -->
+  <section id="view-venta" class="view" hidden>
+    <h2>Ficha de venta</h2>
+    <div id="ventaFicha"></div>
+    <div class="card">
+      <h3>Registrar abono</h3>
+      <div class="grid2">
+        <label>Monto $<input id="abonoMonto" type="number" step="0.01" min="0"></label>
+        <label>Método<select id="abonoMetodo"></select></label>
+        <label>Concepto<select id="abonoConcepto"><option value="abono">Abono</option><option value="liquidación">Liquidación</option></select></label>
+      </div>
+      <button class="btn btn-secondary" id="btnAbono" type="button">Guardar abono</button>
+      <p id="abonoMsg" class="success" hidden></p>
+    </div>
+    <div class="card">
+      <h3>Corregir graduación o precio</h3>
+      <p class="hint">La corrección queda registrada en un histórico imborrable con justificación (el backend nunca borra ese registro).</p>
+      <div class="grid2">
+        <label>Campo<select id="corrCampo"><optgroup label="Graduación"><option value="Grad_Esf_OD">Graduación · Esf OD</option><option value="Grad_Cil_OD">Graduación · Cil OD</option><option value="Grad_Eje_OD">Graduación · Eje OD</option><option value="Grad_Esf_OI">Graduación · Esf OI</option><option value="Grad_Cil_OI">Graduación · Cil OI</option><option value="Grad_Eje_OI">Graduación · Eje OI</option><option value="Grad_Add">Graduación · Add</option><option value="DNP">DNP</option></optgroup><optgroup label="Precio"><option value="Total_Manual">Precio · Total manual</option><option value="Costo_Final_Inversion">Costo final de inversión</option></optgroup></select></label>
+        <label>Valor nuevo<input id="corrNuevo" type="text" placeholder="Ej. Esf OD -2.50… o $1,499.00"></label>
+      </div>
+      <label>Justificación *<input id="corrJustif" type="text" placeholder="Motivo de la corrección"></label>
+      <button class="btn btn-secondary" id="btnCorregir" type="button">Guardar corrección</button>
+      <p id="corrMsg" class="success" hidden></p>
+    </div>
+    <div class="card">
+      <h3>Documentos de esta venta</h3>
+      <div class="row">
+        <button class="btn btn-secondary" data-doc="historia" type="button">Historia clínica</button>
+        <button class="btn btn-secondary" data-doc="orden" type="button">Orden de trabajo</button>
+        <button class="btn btn-secondary" data-doc="ticket" type="button">Ticket</button>
+        <button class="btn btn-secondary" data-doc="comprobante" type="button">Comprobante</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Vista de documento imprimible -->
+  <section id="view-doc" class="view" hidden>
+    <div class="row doc-toolbar">
+      <button class="btn btn-ghost" id="btnDocVolver" type="button">← Volver</button>
+      <button class="btn btn-primary" id="btnDocImprimir" type="button">Imprimir / PDF</button>
+      <button class="btn btn-secondary" id="btnDocCompartir" type="button" hidden>Compartir imagen</button>
+    </div>
+    <div id="docArea"></div>
+  </section>
+
+  <div id="globalError" class="error banner" hidden></div>
+</main>
+
+<footer class="app-footer">
+  <p>OPTICST NEXUS · Boutique de Lentes Yael · Sucursal Calle 4 · Calle 4 N° 342, Ciudad de México, 08100 · Tel. 5592405025 / 5611586976</p>
+</footer>
+
+<!-- Menú inferior fijo tipo Cashi: 3 ítems a cada lado del FAB central -->
+<nav class="bottom-nav" id="bottomNav" aria-label="Navegación principal" hidden>
+  <div class="nav-group">
+    <button class="nav-item" type="button" data-nav="home"><span class="nav-icon">🏠</span><span>Inicio</span></button>
+    <button class="nav-item" type="button" data-nav="pendientes"><span class="nav-icon">📦</span><span>Pendientes</span></button>
+    <button class="nav-item" type="button" data-nav="ventas"><span class="nav-icon">🛒</span><span>Ventas</span></button>
+  </div>
+  <div class="nav-spacer" aria-hidden="true"></div>
+  <div class="nav-group">
+    <button class="nav-item" type="button" data-nav="en-proceso"><span class="nav-icon">⚙️</span><span>En proceso</span></button>
+    <button class="nav-item" type="button" data-nav="lista-materiales"><span class="nav-icon">🧾</span><span>Materiales</span></button>
+    <button class="nav-item" type="button" data-nav="resumen"><span class="nav-icon">📊</span><span>Resumen</span></button>
+  </div>
+  <button class="nav-fab" type="button" data-nav="nueva-venta" aria-label="Nueva venta"><span class="nav-fab-circle">＋</span><span class="nav-fab-label">Nueva venta</span></button>
+</nav>
+
+<script src="app.js"></script>
+</body>
+</html>
