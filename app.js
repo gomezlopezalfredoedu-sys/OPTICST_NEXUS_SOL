@@ -6,14 +6,14 @@
 'use strict';
 
 /* ---------- Configuración ---------- */
-const LS_URL = 'bly_api_url';
-const LS_TOKEN = 'bly_api_token';
-const LS_DEMO = 'bly_demo';
+const LS_URL = 'bly_sol_api_url';
+const LS_TOKEN = 'bly_sol_api_token';
+const LS_DEMO = 'bly_sol_demo';
 const NEGOCIO = {
   nombre: 'Boutique de Lentes Yael',
-  sucursal: 'Calle 4',
-  direccion: 'Calle 4 N° 342, Ciudad de México, 08100',
-  telefonos: '5592405025 / 5611586976'
+  sucursal: 'El Sol',
+  direccion: 'Calle 15, 61. El Sol, Nezahualcóyotl, Estado de México 57200',
+  telefonos: '5567513976'
 };
 const GARANTIAS = { adaptacion: '30 días de adaptación', armazon: '6 meses armazón', tratamiento: '6 meses tratamiento' };
 const PROXIMA_VISITA_MESES = 10;
@@ -22,7 +22,7 @@ const PROXIMA_VISITA_MESES = 10;
    operador de proceso, la entidad que elabora los lentes. Por eso SOLO
    en las órdenes de trabajo sale Luna; todo lo demás (comprobante,
    ticket, historia clínica, app) sigue con Yael / OPTICST NEXUS.
-   La dirección y los teléfonos son los mismos de Calle 4.
+   La dirección y los teléfonos son los de la sucursal (NEGOCIO).
    El logo es `logo-luna-fuerte.png` (v2.3: alfa dilatado 1px +
    colores ×0.68 para que el trazo fino se lea a 84px y como marca de
    agua; la versión normal `logo-luna.png` se perdía al achicar).
@@ -34,7 +34,7 @@ const LABORATORIO = {
   telefonos: NEGOCIO.telefonos,
   logo: 'logo-luna-fuerte.png'
 };
-const LS_ORDENES_SEL = 'bly_ordenes_sel'; // selección de trabajos para armar hojas de órdenes
+const LS_ORDENES_SEL = 'bly_sol_ordenes_sel'; // selección de trabajos para armar hojas de órdenes
 const ETIQUETAS_POR_HOJA = 9;             // rejilla 3×3 en carta
 const SIN_PROVEEDOR = 'Sin proveedor';    // grupo aparte, nunca se descarta en silencio
 
@@ -857,7 +857,7 @@ async function cargarPendientes() {
         '<div class="venta-lineas"><small>Total ' + money(v.totalManual) + ' · Pagado ' + money(v.aCuenta) + ' · Saldo ' + money(v.saldo) + '</small>' + metodosChipsHTML(v) + '</div>' +
         '<div class="venta-lineas"><small>Estado: ' + esc(v.estado || t.estado || '') + '</small></div>' +
         '<div class="row">' +
-        (tel ? '<a class="btn btn-secondary" href="https://wa.me/52' + tel + '?text=' + encodeURIComponent('Hola, le avisamos de Boutique de Lentes Yael (Calle 4) que su trabajo ' + (v.folio || '') + ' ya está listo para recoger. ¡Gracias por su preferencia!') + '" target="_blank" rel="noopener">Avisar por WhatsApp</a>' : '<span class="hint">Sin teléfono para avisar.</span>') +
+        (tel ? '<a class="btn btn-secondary" href="https://wa.me/52' + tel + '?text=' + encodeURIComponent('Hola, le avisamos de Boutique de Lentes Yael (' + NEGOCIO.sucursal + ') que su trabajo ' + (v.folio || '') + ' ya está listo para recoger. ¡Gracias por su preferencia!') + '" target="_blank" rel="noopener">Avisar por WhatsApp</a>' : '<span class="hint">Sin teléfono para avisar.</span>') +
         '<button class="btn btn-secondary" type="button" data-open-venta="' + esc(t.ventaId) + '">Ver ficha</button></div>';
       box.appendChild(d);
     });
@@ -1529,7 +1529,7 @@ function partirEnHojas(items, porHoja) {
 }
 /* Ticket 58 mm estilo ANTERIOR (Fase 4): monocromo, logo CIRCULAR de Yael
    en negro (logo-yael-circular-mono.png, v2.1) centrado arriba,
-   nombre del negocio, dirección y teléfonos de Calle 4,
+   nombre del negocio, dirección y teléfonos de la sucursal (NEGOCIO),
    "COMPROBANTE DE VENTA" + folio, cliente + ID + fecha, conceptos,
    Subtotal (precios definidos), Descuento, TOTAL GRANDE en negrita,
    Pagado, Saldo en negrita, Estado y "Gracias por su preferencia".
@@ -2076,7 +2076,7 @@ async function compartirDoc() {
   const c = doc.cliente || {};
   // v2.3.5: mensaje de WhatsApp como el del ticket que le gusta a
   // Alfredo — saludo personal, sin el texto largo predeterminado
-  // ("Boutique de Lentes Yael (Calle 4) — Comprobante de venta
+  // ("Boutique de Lentes Yael (El Sol) — Comprobante de venta
   // VTA-0001 · Cliente: … · Total: …"). Los totales ya van dentro
   // de la imagen del documento.
   const tipoTxt = doc.kind === 'ticket' ? 'ticket' : 'comprobante de venta';
